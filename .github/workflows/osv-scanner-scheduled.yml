@@ -42,12 +42,15 @@ jobs:
     # Generate SBOM
     - name: Generate SBOM
       run: |
-        syft packages dir:. --output cyclonedx-json --file sbom.json
-
+        syft scan dir:. \
+          --name "${{ github.repository }}" \
+          --version "${{ github.sha }}" \
+          --output cyclonedx-json=sbom.json
+          
     # Run vulnerability scan
     - name: Scan dependencies
       run: |
-        osv-scanner --sbom=sbom.json --format=json --output=results.json
+        osv-scanner --sbom=sbom.json --sbom-format=cyclonedx --format=json --output=results.json
 
     # Upload results
     - name: Upload scan results
