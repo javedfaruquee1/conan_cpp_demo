@@ -41,7 +41,7 @@ jobs:
 
     # Conditional CMake build (only if CMakeLists.txt exists)
     - name: Build project (CMake)
-      if: contains(github.event.pull_request.labels.*.name, 'cmake') || exists('CMakeLists.txt')
+      if: steps.check-cmake.outputs.cmake_exists == 'true'
       run: |
         cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .
         cmake --build build
