@@ -12,44 +12,49 @@ permissions:
   contents: read
 
 jobs:
+  # Main scanning job
   osv-scan:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # Install dependencies (example for a typical C++ project using make/cmake)
+    # Install build dependencies
     - name: Install build dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential cmake
 
-    # Generate SBOM (Software Bill of Materials) using cdxgen
+    # Generate SBOM using Syft
     - name: Generate SBOM with syft
       uses: anchore/sbom-action@v0
       with:
         output-format: cyclonedx-json
         output-file: sbom.json
-      #env:
-        # For C++ projects, we need to analyze compiled binaries
-        #CDXGEN_CPP_BIN: "true"
-        #CDXGEN_CPP_INCLUDE_DEV: "false"
 
-    # Run OSV-Scanner on the generated SBOM
+    # Run OSV-Scanner directly (not as reusable workflow)
     - name: Run OSV-Scanner
-      uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.0.0"
+      uses: google/osv-scanner-action@v2
       with:
         scan-args: "--sbom=sbom.json --format=json --output=results.json"
 
-    # Upload results for review
+    # Upload results
     - name: Upload scan results
       uses: actions/upload-artifact@v3
       with:
         name: vulnerability-scan-results
         path: results.json
 
-    # Optional: Upload to GitHub's security tab
+    # Upload to GitHub security tab
     - name: Upload SARIF results
       uses: github/codeql-action/upload-sarif@v2
       with:
         sarif_file: results.json
+
+  # If you REALLY need the reusable workflow version, it would look like this:
+  # (but note this requires separate job organization)
+  # reusable-workflow-scan:
+  #   uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.0.0
+  #   with:
+  #     scan-args: "--sbom=sbom.json --format=json --output=results.json"
+  #   secrets: inherit
