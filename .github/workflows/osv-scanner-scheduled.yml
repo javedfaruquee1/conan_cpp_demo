@@ -18,10 +18,17 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    # Setup Go environment (required for osv-scanner installation)
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
     # Install OSV-Scanner (correct method)
     - name: Install OSV-Scanner
       run: |
         go install github.com/google/osv-scanner/v2/cmd/osv-scanner@latest
+        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
         osv-scanner --version
 
     # Install build tools and Syft
@@ -30,6 +37,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential cmake
         curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
 
     # Generate SBOM
     - name: Generate SBOM
