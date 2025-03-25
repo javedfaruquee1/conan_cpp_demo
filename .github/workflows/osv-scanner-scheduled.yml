@@ -54,10 +54,10 @@ jobs:
           --source-name "${{ github.repository }}" \
           --source-version "${{ github.sha }}"
           
-    # Run vulnerability scan
-    - name: Scan dependencies
+    # Scan with explicit CycloneDX format
+    - name: Run vulnerability scan
       run: |
-        osv-scanner --sbom=sbom.json --format=json --output=results.json
+        osv-scanner --format=json --output=results.json sbom.cdx.json
 
     # Upload results
     - name: Upload scan results
@@ -65,9 +65,3 @@ jobs:
       with:
         name: vulnerability-scan-results
         path: results.json
-
-    # Upload to security tab
-    - name: Upload SARIF results
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: results.json
