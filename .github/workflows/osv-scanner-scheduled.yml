@@ -2,7 +2,7 @@ name: OSV-Scanner with SBOM
 
 on:
   schedule:
-    - cron: "40 10 * * *"
+    - cron: "41 10 * * *"
   push:
     branches: [main]
 
@@ -18,43 +18,37 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # Install OSV-Scanner (official method)
+    # Install OSV-Scanner (correct method)
     - name: Install OSV-Scanner
-      uses: google/osv-scanner/actions/setup@v1
-      with:
-        version: v2.0.0
+      run: |
+        curl -sfL https://osv.dev/install.sh | sh -s -- -b /usr/local/bin
+        osv-scanner --version
 
-    # Install build tools and SBOM generator
+    # Install build tools and Syft
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential cmake
         curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
 
-    - name: Configure project
-      run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .
-
-    - name: Build project
-      run: cmake --build build
-  
-    # Generate SBOM using Syft
+    # Generate SBOM
     - name: Generate SBOM
       run: |
         syft packages dir:. --output cyclonedx-json --file sbom.json
 
-    # Run OSV-Scanner on SBOM
+    # Run vulnerability scan
     - name: Scan dependencies
       run: |
         osv-scanner --sbom=sbom.json --format=json --output=results.json
 
-    # Upload results (using v4 which is current latest)
+    # Upload results
     - name: Upload scan results
       uses: actions/upload-artifact@v4
       with:
         name: vulnerability-scan-results
         path: results.json
 
-    # Upload to GitHub security tab
+    # Upload to security tab
     - name: Upload SARIF results
       uses: github/codeql-action/upload-sarif@v3
       with:
