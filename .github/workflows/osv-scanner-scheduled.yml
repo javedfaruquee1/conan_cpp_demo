@@ -2,7 +2,7 @@ name: OSV-Scanner with SBOM
 
 on:
   schedule:
-    - cron: "10 23 * * *"
+    - cron: "10 25 * * *"
   push:
     branches: [main]
 
@@ -37,7 +37,7 @@ jobs:
 
     # Run OSV-Scanner on the generated SBOM
     - name: Run OSV-Scanner
-      uses: google/osv-scanner-action@v2
+      uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.0.0"
       with:
         scan-args: "--sbom=sbom.json --format=json --output=results.json"
 
