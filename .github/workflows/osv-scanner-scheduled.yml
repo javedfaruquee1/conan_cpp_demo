@@ -2,7 +2,7 @@ name: OSV-Scanner with SBOM
 
 on:
   schedule:
-    - cron: "10 25 * * *"
+    - cron: "28 10 * * *"
   push:
     branches: [main]
 
