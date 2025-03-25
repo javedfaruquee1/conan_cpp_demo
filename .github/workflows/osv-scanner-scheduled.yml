@@ -2,7 +2,7 @@ name: OSV-Scanner with SBOM
 
 on:
   schedule:
-    - cron: "30 10 * * *"
+    - cron: "33 10 * * *"
   push:
     branches: [main]
 
@@ -12,31 +12,40 @@ permissions:
   contents: read
 
 jobs:
-  # Main scanning job
   osv-scan:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # Install build dependencies
+    # Install OSV-Scanner (official method)
+    - name: Install OSV-Scanner
+      uses: google/osv-scanner/actions/setup@v1
+      with:
+        version: v2.0.0
+
+    # Install build tools for C++
     - name: Install build dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential cmake
 
+    - name: Configure project
+      run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .
+
+    - name: Build project
+      run: cmake --build build
     # Generate SBOM using Syft
-    - name: Generate SBOM with syft
+    - name: Generate SBOM
       uses: anchore/sbom-action@v0
       with:
         output-format: cyclonedx-json
         output-file: sbom.json
 
-    # Run OSV-Scanner directly (not as reusable workflow)
-    - name: Run OSV-Scanner
-      uses: google/osv-scanner-action@v2
-      with:
-        scan-args: "--sbom=sbom.json --format=json --output=results.json"
+    # Run OSV-Scanner on SBOM
+    - name: Scan dependencies
+      run: |
+        osv-scanner --sbom=sbom.json --format=json --output=results.json
 
     # Upload results
     - name: Upload scan results
@@ -45,16 +54,9 @@ jobs:
         name: vulnerability-scan-results
         path: results.json
 
-    # Upload to GitHub security tab
+    # Optional: Upload to GitHub security tab
     - name: Upload SARIF results
+      if: always()
       uses: github/codeql-action/upload-sarif@v2
       with:
         sarif_file: results.json
-
-  # If you REALLY need the reusable workflow version, it would look like this:
-  # (but note this requires separate job organization)
-  # reusable-workflow-scan:
-  #   uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.0.0
-  #   with:
-  #     scan-args: "--sbom=sbom.json --format=json --output=results.json"
-  #   secrets: inherit
