@@ -43,9 +43,9 @@ jobs:
     - name: Generate SBOM
       run: |
         syft scan dir:. \
-          --name "${{ github.repository }}" \
-          --version "${{ github.sha }}" \
-          --output cyclonedx-json=sbom.json
+          --output cyclonedx-json=sbom.json \
+          --source-name "${{ github.repository }}" \
+          --source-version "${{ github.sha }}"
           
     # Run vulnerability scan
     - name: Scan dependencies
