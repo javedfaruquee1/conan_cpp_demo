@@ -2,7 +2,7 @@ name: OSV-Scanner with SBOM
 
 on:
   schedule:
-    - cron: "41 10 * * *"
+    - cron: "2 * * * *"
   push:
     branches: [main]
 
@@ -21,7 +21,7 @@ jobs:
     # Install OSV-Scanner (correct method)
     - name: Install OSV-Scanner
       run: |
-        curl -sfL https://osv.dev/install.sh | sh -s -- -b /usr/local/bin
+        apk add osv-scanner
         osv-scanner --version
 
     # Install build tools and Syft
