@@ -43,8 +43,16 @@ jobs:
     - name: Build project (CMake)
       if: steps.check-cmake.outputs.cmake_exists == 'true'
       run: |
+        # Find CMakeLists.txt recursively
+        CMAKE_DIR=$(find . -name CMakeLists.txt -printf '%h\n' | head -1)
+        if [ -z "$CMAKE_DIR" ]; then
+          echo "Error: CMakeLists.txt not found in repository"
+          exit 1
+        fi
+        echo "Found CMakeLists.txt in $CMAKE_DIR"
+        cd "$CMAKE_DIR"
         cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .
-        cmake --build build
+        cmake --build build    
     
     # Generate SBOM
     - name: Generate SBOM
