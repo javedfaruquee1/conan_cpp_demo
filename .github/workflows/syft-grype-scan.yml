@@ -1,4 +1,4 @@
-name: SBOM & VEX with CycloneDX
+name: SBOM with CycloneDX
 
 on:
   push:
@@ -7,12 +7,12 @@ on:
     branches: [ main ]
 
 jobs:
-  sbom-vex:
+  sbom-scan:
     runs-on: ubuntu-latest
 
     steps:
       - name: ⬇️ Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: 🛠️ Set up environment
         run: |
@@ -28,40 +28,20 @@ jobs:
         run: |
           echo "Generating SBOM using Syft..."
           syft . -o cyclonedx-json > sbom.cdx.json
-          echo "📝 SBOM (first 100 lines):"
+          echo "📝 SBOM Preview (first 100 lines):"
           head -n 100 sbom.cdx.json
 
       - name: 🕵️ Scan for vulnerabilities using Grype
         run: |
           echo "Scanning SBOM with Grype..."
           grype sbom:sbom.cdx.json -o cyclonedx-json > grype-results.cdx.json
-          echo "🛡 Vulnerabilities (first 100 lines):"
+          echo "🛡 Vulnerability Report Preview (first 100 lines):"
           head -n 100 grype-results.cdx.json
 
-      - name: 📥 Install CycloneDX VEX Composer
-        run: |
-          curl -sSfL https://github.com/CycloneDX/cyclonedx-vex-composer/releases/latest/download/cyclonedx-vex-composer-linux-x64 -o vex-composer
-          chmod +x vex-composer
-          sudo mv vex-composer /usr/local/bin/vex-composer
-
-      - name: 🧾 Generate CycloneDX VEX from Grype results
-        run: |
-          vex-composer create \
-            --sbom sbom.cdx.json \
-            --vulnerabilities grype-results.cdx.json \
-            --output vex.json \
-            --author "GitHub Actions" \
-            --supplier "your-org-name" \
-            --no-auto-justification
-
-          echo "📈 VEX report (first 100 lines):"
-          head -n 100 vex.json
-
-      - name: 📤 Upload results
+      - name: 📤 Upload SBOM and Grype results
         uses: actions/upload-artifact@v4
         with:
-          name: SBOM-and-VEX
+          name: SBOM-and-Grype-Scan
           path: |
             sbom.cdx.json
             grype-results.cdx.json
-            vex.json
