@@ -1,4 +1,4 @@
-name: SBOM and Vulnerability Scan
+name: SBOM & VEX with CycloneDX
 
 on:
   push:
@@ -7,32 +7,61 @@ on:
     branches: [ main ]
 
 jobs:
-  scan:
-    name: Run Syft + Grype
+  sbom-vex:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Install Syft
+      - name: 🛠️ Set up environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl jq
+
+      - name: 📦 Install Syft and Grype
         run: |
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-
-      - name: Install Grype
-        run: |
           curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
 
-      - name: Generate SBOM with Syft
+      - name: 📝 Generate CycloneDX SBOM
         run: |
-          syft . -o spdx-json > sbom.spdx.json
+          echo "Generating SBOM using Syft..."
+          syft . -o cyclonedx-json > sbom.cdx.json
+          echo "📝 SBOM (first 100 lines):"
+          head -n 100 sbom.cdx.json
 
-      - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
+      - name: 🕵️ Scan for vulnerabilities using Grype
+        run: |
+          echo "Scanning SBOM with Grype..."
+          grype sbom:sbom.cdx.json -o cyclonedx-json > grype-results.cdx.json
+          echo "🛡 Vulnerabilities (first 100 lines):"
+          head -n 100 grype-results.cdx.json
+
+      - name: 📥 Install CycloneDX VEX Composer
+        run: |
+          curl -sSfL https://github.com/CycloneDX/cyclonedx-vex-composer/releases/latest/download/cyclonedx-vex-composer-linux-x64 -o vex-composer
+          chmod +x vex-composer
+          sudo mv vex-composer /usr/local/bin/vex-composer
+
+      - name: 🧾 Generate CycloneDX VEX from Grype results
+        run: |
+          vex-composer create \
+            --sbom sbom.cdx.json \
+            --vulnerabilities grype-results.cdx.json \
+            --output vex.json \
+            --author "GitHub Actions" \
+            --supplier "your-org-name" \
+            --no-auto-justification
+
+          echo "📈 VEX report (first 100 lines):"
+          head -n 100 vex.json
+
+      - name: 📤 Upload results
+        uses: actions/upload-artifact@v3
         with:
-          name: sbom
-          path: sbom.spdx.json
-
-      - name: Scan for vulnerabilities with Grype (using SBOM)
-        run: |
-          grype sbom:sbom.spdx.json
+          name: SBOM-and-VEX
+          path: |
+            sbom.cdx.json
+            grype-results.cdx.json
+            vex.json
